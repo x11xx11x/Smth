@@ -134,7 +134,7 @@ ask_pass "$USERNAME"; USER_PASS=$PASS
 ask "Parola root e aceeasi cu a utilizatorului? (d/n)" "d"
 if [[ $REPLY =~ ^[dDyY] ]]; then ROOT_PASS=$USER_PASS; else ask_pass "root"; ROOT_PASS=$PASS; fi
 
-ask "Fus orar" "Europe/Bucharest"; TIMEZONE=$REPLY
+ask "Fus orar" "Europe/Brussels"; TIMEZONE=$REPLY
 [[ -f /usr/share/zoneinfo/$TIMEZONE ]] || die "Fus orar invalid: $TIMEZONE"
 ask "Limba sistemului (ro_RO.UTF-8 sau en_US.UTF-8)" "ro_RO.UTF-8"; LANG_SYS=$REPLY
 ask "Layout tastatura in consola" "us"; KEYMAP=$REPLY
