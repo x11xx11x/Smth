@@ -136,7 +136,7 @@ if [[ $REPLY =~ ^[dDyY] ]]; then ROOT_PASS=$USER_PASS; else ask_pass "root"; ROO
 
 ask "Fus orar" "Europe/Brussels"; TIMEZONE=$REPLY
 [[ -f /usr/share/zoneinfo/$TIMEZONE ]] || die "Fus orar invalid: $TIMEZONE"
-ask "Limba sistemului (ro_RO.UTF-8 sau en_US.UTF-8)" "ro_RO.UTF-8"; LANG_SYS=$REPLY
+ask "Limba sistemului (en_US.UTF-8 sau ro_RO.UTF-8)" "en_US.UTF-8"; LANG_SYS=$REPLY
 ask "Layout tastatura in consola" "us"; KEYMAP=$REPLY
 ask "Instalez si kernelul LTS ca rezerva (recomandat)? (d/n)" "d"
 [[ $REPLY =~ ^[dDyY] ]] && LTS=1 || LTS=0
@@ -351,7 +351,7 @@ PKGS=(
 
   # Aplicatii
   firefox thunderbird
-  libreoffice-fresh libreoffice-fresh-ro hunspell hunspell-en_us
+  libreoffice-fresh hunspell hunspell-en_us
   vlc mpv obs-studio gimp inkscape
   qbittorrent keepassxc
 

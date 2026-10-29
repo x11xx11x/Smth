@@ -41,7 +41,7 @@ Scriptul îți arată toate discurile, numerotate, cu partițiile de pe ele. Sti
 | Drivere video | detectate automat: NVIDIA (`nvidia-open-dkms`), AMD, Intel, plus 32-bit |
 | Rețea | NetworkManager, OpenVPN, WireGuard, Bluetooth |
 | Imprimante | CUPS, HPLIP, scanare în rețea |
-| Aplicații | Firefox, Thunderbird, LibreOffice (cu română), VLC, mpv, OBS, GIMP, Inkscape, qBittorrent, KeePassXC |
+| Aplicații | Firefox, Thunderbird, LibreOffice, VLC, mpv, OBS, GIMP, Inkscape, qBittorrent, KeePassXC |
 | Codecuri și fonturi | FFmpeg, GStreamer complet, Noto (inclusiv emoji și CJK), JetBrains Mono Nerd |
 | Sistem | Btrfs + snapshot-uri automate (Snapper, vizibile în meniul GRUB), zram, firewall (ufw), Flatpak + Flathub, `yay` pentru AUR, fwupd |
 | Kernel | `linux` + opțional `linux-lts` ca rezervă |
