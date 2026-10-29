@@ -49,35 +49,65 @@ ok "Internet OK"
 timedatectl set-ntp true || true
 
 # ---------- intrebari ----------
-# --- discuri (fara stick-ul de pe care ai pornit) ---
-LIVE_DISK=""
-LIVE_SRC=$(findmnt -no SOURCE /run/archiso/bootmnt 2>/dev/null || true)
-[[ -n $LIVE_SRC ]] && LIVE_DISK=/dev/$(lsblk -no PKNAME "$LIVE_SRC" | head -n1)
-mapfile -t DISKS < <(lsblk -dpno NAME,TYPE | awk '$2=="disk"{print $1}' \
-                     | grep -vE 'loop|sr[0-9]|zram' | grep -vxF "${LIVE_DISK:-/dev/none}" || true)
+# --- gasesc stick-ul de pe care ai pornit, ca sa nu fie sters niciodata ---
+top_disk() { lsblk -lnpso NAME,TYPE "$1" 2>/dev/null | awk '$2=="disk"{print $1; exit}'; }
+declare -A LIVE=()
+for mp in /run/archiso/bootmnt /run/archiso/img_dev /run/archiso/cowspace; do
+    src=$(findmnt -no SOURCE "$mp" 2>/dev/null || true)
+    if [[ -n $src && -b $src ]]; then d=$(top_disk "$src"); [[ -n $d ]] && LIVE[$d]=1; fi
+done
+# orice disc care contine ISO-ul de Arch sau Ventoy e tot stick-ul de instalare
+for p in $(lsblk -lnpo NAME); do
+    fs=$(lsblk -dno FSTYPE "$p" 2>/dev/null || true)
+    lb=$(lsblk -dno LABEL  "$p" 2>/dev/null || true)
+    if [[ $fs == iso9660 || $lb =~ ^(ARCH_|ARCHISO|Ventoy|VTOYEFI) ]]; then
+        d=$(top_disk "$p"); [[ -n $d ]] && LIVE[$d]=1
+    fi
+done
+
+is_usb() { [[ $(lsblk -dno TRAN "$1" 2>/dev/null) == usb ]]; }
+
+DISKS=()
+while read -r d; do
+    [[ $d =~ (loop|sr[0-9]|zram|ram[0-9]) ]] && continue
+    [[ -n ${LIVE[$d]:-} ]] && continue
+    DISKS+=("$d")
+done < <(lsblk -dpno NAME,TYPE | awk '$2=="disk"{print $1}')
 ((${#DISKS[@]})) || die "Nu am gasit niciun disc pe care sa instalez."
 
 echo
 info "Discuri gasite:"
 for i in "${!DISKS[@]}"; do
     d=${DISKS[$i]}
-    printf '  %s) %-15s %8s  %s\n' "$((i+1))" "$d" "$(lsblk -dno SIZE "$d")" "$(lsblk -dno MODEL "$d" | xargs)"
+    tag=""; is_usb "$d" && tag="${Y}[USB]${N}"
+    printf '  %s) %-15s %8s  %s %s\n' "$((i+1))" "$d" "$(lsblk -dno SIZE "$d")" "$(lsblk -dno MODEL "$d" | xargs)" "$tag"
     lsblk -no NAME,SIZE,FSTYPE,LABEL "$d" | tail -n +2 | sed 's/^/        /'
 done
-[[ -n $LIVE_DISK ]] && echo "  (stick-ul live $LIVE_DISK e ascuns, nu poate fi sters)"
+for d in "${!LIVE[@]}"; do
+    echo "  ${G}(stick-ul de instalare $d e ascuns si protejat - nu se sterge)${N}"
+done
 echo
 
 ask "Numarul discului pe care instalez Arch" "1"
 [[ $REPLY =~ ^[0-9]+$ ]] && (( REPLY >= 1 && REPLY <= ${#DISKS[@]} )) || die "Numar invalid."
 DISK=${DISKS[$((REPLY-1))]}
+if is_usb "$DISK"; then
+    warn "$DISK e un disc USB. Esti sigur ca vrei sa instalezi Arch pe el?"
+    ask "Continui? (d/n)" "n"; [[ $REPLY =~ ^[dDyY] ]] || die "Anulat."
+fi
 
-OTHER_DISKS=()
-for d in "${DISKS[@]}"; do [[ $d != "$DISK" ]] && OTHER_DISKS+=("$d"); done
+# celelalte discuri interne; discurile USB nu se sterg niciodata automat
+OTHER_DISKS=(); USB_KEEP=()
+for d in "${DISKS[@]}"; do
+    [[ $d == "$DISK" ]] && continue
+    if is_usb "$d"; then USB_KEEP+=("$d"); else OTHER_DISKS+=("$d"); fi
+done
 
 WIPE_MODE=1
 if ((${#OTHER_DISKS[@]})); then
     echo
-    info "Ce fac cu celelalte discuri (${OTHER_DISKS[*]})?"
+    info "Ce fac cu celelalte discuri interne: ${OTHER_DISKS[*]} ?"
+    ((${#USB_KEEP[@]})) && echo "  (discurile USB ${USB_KEEP[*]} raman oricum neatinse)"
     echo "  1) Le las NEATINSE - sterg doar $DISK  (bun pentru dual-boot cu Windows)"
     echo "  2) Le sterg si le fac discuri de date goale (apar in /data, gata de folosit)"
     echo "  3) Le sterg complet si le las neformatate"
@@ -91,6 +121,11 @@ case $WIPE_MODE in
     2) WIPE_DISKS+=("${OTHER_DISKS[@]}"); DATA_DISKS=("${OTHER_DISKS[@]}") ;;
     3) WIPE_DISKS+=("${OTHER_DISKS[@]}") ;;
 esac
+
+# ultima plasa de siguranta: stick-ul live nu ajunge niciodata in lista de sters
+for d in "${WIPE_DISKS[@]}"; do
+    [[ -n ${LIVE[$d]:-} ]] && die "Refuz sa sterg stick-ul de instalare $d."
+done
 
 ask "Nume calculator (hostname)" "arch"; HOSTNAME=$REPLY
 ask "Nume utilizator (litere mici)" "theodor"; USERNAME=$REPLY
@@ -135,7 +170,9 @@ echo "================= REZUMAT ================="
 echo " Arch pe:     $DISK"
 echo " SE STERG:    ${WIPE_DISKS[*]}"
 ((${#DATA_DISKS[@]})) && echo " Discuri date: ${DATA_DISKS[*]}  -> /data/disk1, /data/disk2..."
-((${#OTHER_DISKS[@]})) && [[ $WIPE_MODE == 1 ]] && echo " Neatinse:    ${OTHER_DISKS[*]}"
+KEEP=("${USB_KEEP[@]}"); [[ $WIPE_MODE == 1 ]] && KEEP+=("${OTHER_DISKS[@]}")
+((${#KEEP[@]})) && echo " Neatinse:    ${KEEP[*]}"
+((${#LIVE[@]})) && echo " Stick live:  ${!LIVE[*]} (protejat)"
 echo " Boot:        $BOOT_MODE"
 echo " Hostname:    $HOSTNAME"
 echo " Utilizator:  $USERNAME"

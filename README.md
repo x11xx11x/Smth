@@ -24,7 +24,7 @@ Script care instalează Arch Linux de la zero cu KDE Plasma complet și toate ap
 
 ## Discuri
 
-Scriptul îți arată toate discurile, numerotate, cu partițiile de pe ele. Stick-ul USB de pe care ai pornit e ascuns automat, ca să nu-l ștergi din greșeală. Alegi discul pentru Arch, apoi, dacă ai mai multe discuri:
+Scriptul îți arată toate discurile, numerotate, cu partițiile de pe ele. Stick-ul de pe care ai pornit (inclusiv Ventoy) e detectat și ascuns automat, deci nu poate fi șters. Alte discuri USB sunt marcate cu `[USB]` și nu se șterg niciodată la opțiunile 2 și 3. Alegi discul pentru Arch, apoi, dacă ai mai multe discuri:
 
 | Opțiune | Ce face |
 |---|---|
